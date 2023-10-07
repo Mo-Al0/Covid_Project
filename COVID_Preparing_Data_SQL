@@ -1,0 +1,168 @@
+-- Taking a look over the data we have 
+SELECT *
+From exalted-justice-394105.coviddeaths.coviddeaths_covid
+WHERE continent IS NOT null
+ORDER BY 3,4
+
+SELECT *
+From exalted-justice-394105.covidvaccinations.covidvaccinations_covid
+WHERE continent IS NOT null
+ORDER BY 3,4
+
+
+-- Select Data that we are going to be using
+SELECT
+location,date,total_cases, new_cases, total_deaths, population
+FROM exalted-justice-394105.coviddeaths.coviddeaths_covid
+WHERE continent IS NOT null
+ORDER BY 1,2
+
+
+-- Looking at Total Cases vs Total Deaths
+-- Exploring Some Countries  
+
+-- United Arab Emirates
+SELECT
+location,date,total_cases, total_deaths,
+(total_deaths/total_cases)*100 AS DeathPercentage
+FROM exalted-justice-394105.coviddeaths.coviddeaths_covid
+WHERE location LIKE '%United Arab Emirates'
+AND continent IS NOT null
+ORDER BY 1,2
+
+-- United States
+SELECT
+location,date,total_cases, total_deaths,
+(total_deaths/total_cases)*100 AS DeathPercentage
+FROM exalted-justice-394105.coviddeaths.coviddeaths_covid
+WHERE location LIKE '%United States'
+AND continent IS NOT null
+ORDER BY 1,2
+
+-- Albania
+SELECT
+location,date,total_cases, total_deaths,
+(total_deaths/total_cases)*100 AS DeathPercentage
+FROM exalted-justice-394105.coviddeaths.coviddeaths_covid
+WHERE location LIKE '%Albania'
+AND continent IS NOT null
+ORDER BY 1,2
+
+-- Afghanistan
+SELECT
+location,date,total_cases, total_deaths,
+(total_deaths/total_cases)*100 AS DeathPercentage
+FROM exalted-justice-394105.coviddeaths.coviddeaths_covid
+WHERE location LIKE '%Afghanistan'
+AND continent IS NOT null
+ORDER BY 1,2
+
+-- Canada
+SELECT
+location,date,total_cases, total_deaths,
+(total_deaths/total_cases)*100 AS DeathPercentage
+FROM exalted-justice-394105.coviddeaths.coviddeaths_covid
+WHERE location LIKE '%Canada'
+AND continent IS NOT null
+ORDER BY 1,2
+
+-- Looking at Total Cases vs Population
+-- Shows what percentage of population that got Infected by Covid
+SELECT
+location,date,total_cases, population,
+(total_cases/population)*100 AS Infected_Cases_Percentage
+FROM exalted-justice-394105.coviddeaths.coviddeaths_covid
+WHERE location LIKE '%States'
+AND continent IS NOT null
+ORDER BY 1,2
+
+
+-- Looking At Countries With Highest Infection Rates Compared To Population
+SELECT
+location, population, MAX(total_cases) AS Highest_Infection_Cases,
+MAX((total_cases/population))*100 AS Infected_Cases_Percentage
+FROM exalted-justice-394105.coviddeaths.coviddeaths_covid
+WHERE continent IS NOT null
+GROUP BY location, population
+ORDER BY Highest_Infection_Cases DESC
+
+
+-- Showing Countries with the Highest Death Count per Population
+SELECT
+location, MAX(total_deaths) AS Total_Death_Count,
+FROM exalted-justice-394105.coviddeaths.coviddeaths_covid
+WHERE continent IS NOT null
+GROUP BY location
+ORDER BY Total_Death_Count DESC
+
+
+-- LET'S BREAK THINGS DOWN BY Location
+SELECT
+location, MAX(total_deaths) AS Total_Death_Count,
+FROM exalted-justice-394105.coviddeaths.coviddeaths_covid
+WHERE continent IS null
+GROUP BY location
+ORDER BY Total_Death_Count DESC
+
+-- Showing continents with the highest death count per population
+SELECT
+continent, MAX(total_deaths) AS Total_Death_Count,
+FROM exalted-justice-394105.coviddeaths.coviddeaths_covid
+WHERE continent IS NOT null
+GROUP BY continent
+ORDER BY Total_Death_Count DESC
+
+-- Global Numbers
+SELECT
+  SUM(new_cases) AS total_cases , SUM(new_deaths) AS total_deaths
+  ,SUM(new_deaths)/ SUM(new_cases)*100
+FROM exalted-justice-394105.coviddeaths.coviddeaths_covid
+WHERE continent IS NOT null
+ORDER BY 1,2
+
+-- Looking at Total Population vs Vaccination 
+SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations
+  , SUM(vac.new_vaccinations) 
+    OVER (PARTITION BY dea.location ORDER BY dea.location,dea.date) AS Vaccinated_People,
+FROM exalted-justice-394105.coviddeaths.coviddeaths_covid AS dea
+JOIN exalted-justice-394105.covidvaccinations.covidvaccinations_covid AS vac
+  ON dea.location = vac.location
+  AND dea.date = vac.date
+WHERE dea.continent IS NOT null
+
+
+
+-- Create a temporary table PopvsVac
+CREATE TEMP TABLE PopvsVac AS
+SELECT 
+  dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations,
+  SUM(vac.new_vaccinations) OVER (PARTITION BY dea.location ORDER BY dea.location, dea.date) 
+  AS Vaccinated_People
+FROM exalted-justice-394105.coviddeaths.coviddeaths_covid AS dea
+JOIN exalted-justice-394105.covidvaccinations.covidvaccinations_covid AS vac
+  ON dea.location = vac.location
+  AND dea.date = vac.date
+WHERE dea.continent IS NOT NULL;
+-- Select all rows from the temporary table
+SELECT *, (Vaccinated_People/population)*100
+FROM PopvsVac;
+
+
+-- Creating view to store data for later visualizations
+CREATE VIEW exalted-justice-394105.coviddeaths.PopvsVac AS 
+SELECT 
+  dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations,
+  SUM(vac.new_vaccinations) OVER (PARTITION BY dea.location ORDER BY dea.location, dea.date) 
+  AS Vaccinated_People
+FROM exalted-justice-394105.coviddeaths.coviddeaths_covid AS dea
+JOIN exalted-justice-394105.covidvaccinations.covidvaccinations_covid AS vac
+  ON dea.location = vac.location
+  AND dea.date = vac.date
+WHERE dea.continent IS NOT NULL
+
+-- OUR NEW TABLE
+SELECT *
+FROM exalted-justice-394105.coviddeaths.PopvsVac
+
+
+
